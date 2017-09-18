@@ -58,7 +58,7 @@ My_TCPSocket::~My_TCPSocket()
     delete  _server;
     _sockets.clear();
     delete timer;
-    qDebug() << "delete";
+    //    delete  sendTimer;
 }
 
 void My_TCPSocket::incommingConnect()
@@ -95,15 +95,15 @@ void My_TCPSocket::readyRead()
     if ( (_buffer == def) && (_cons > 0) ) {
         emit talking(QString("count = %1").arg(_cons) );
         _flagReadyGo = true;
-        Send_Vector(_contour, _cx, _cy);
-        qDebug() << _buffer;
+        Send_Vector();
+        //        qDebug() << _buffer;
     }
     if ( _buffer.length() >= 9 ) {
         if ( (_buffer[0] == 'x') && (_buffer[5] == 'y') ) {
             QString s;
             s = QString::fromLatin1(_buffer);
             s.prepend("Now coordinates ");
-            qDebug() << _buffer;
+            //            qDebug() << _buffer;
             emit talking(s);
         }
     }
@@ -213,14 +213,14 @@ bool My_TCPSocket::Write_X04(bool on)   // laser piupiu on:power
             qDebug()
                 << s->write(QByteArray("X04").append(QString("%1%2").arg(1, 1, 10, QChar('0') ).arg(_power, 2, 10, QChar('0') ) ).append(0x0D).append(0X0A) ) << "X04:1";
         }
-        _laser_on = 1;
+        //        _laser_on = 1;
         return true;
     } else {
         for ( auto &s:_sockets ) {
             qDebug()
                 << s->write(QByteArray("X04").append(QString("%1%2").arg(0, 1, 10, QChar('0') ).arg(_power, 2, 10, QChar('0') ) ).append(0x0D).append(0X0A) ) << "X04:0";
         }
-        _laser_on = 1;
+        //        _laser_on = 0;
         return false;
     }
 }
@@ -246,32 +246,31 @@ bool My_TCPSocket::Write_String(QString)
 
 void My_TCPSocket::Send_Vector(vector<vector<cv::Point> > contour, double cx, double cy)
 {
-    _contour.clear();
+    _d_coord.clear();
 
+    d_Coordinate tmp;
     auto end = contour.end();
     for ( auto it = contour.begin(); it != end; ++it ) {
         for ( auto itt = it->begin(); itt != it->end(); ++itt ) {
-            if ( ( (itt->x < 4500) && (itt->x > 0) ) && ( (itt->y < 4500) && (itt->y > 0) ) )
-                _contour.push_back(*itt);
+            if ( ( (itt->x < 4500) && (itt->x > 0) ) && ( (itt->y < 4500) && (itt->y > 0) ) ) {
+                tmp.x	= itt->x / cx;
+                tmp.y	= itt->y / cy;
+                _d_coord.push_back(tmp);
+            }
         }
     }
 
-    qDebug() << _contour.size();
     _flagReadySend	= false;
-    _cons			= static_cast<unsigned>( _contour.size() - 1);
+    _cons			= static_cast<unsigned>( _d_coord.size() - 1);
     Write_X02(_speed);
-    _cx = cx;
-    _cy = cy;
-    //    Write_X01(900 - (_contour[0].x + _shift_x) / cx, (_contour[0].y + _shift_y) / cy, 0, _power);
-    Send_Vector(_contour, _cx, _cy);
-}
+    Send_Vector();
+}   // My_TCPSocket::Send_Vector
 
-void My_TCPSocket::Send_Vector(vector<Point>, double cx, double cy)
+void My_TCPSocket::Send_Vector()
 {
-    qDebug() << QObject::thread();
     _flagReadySend = false;
     if ( _flagReadyGo ) {
-        qDebug() << "Send Vector " << "size : " << _contour.size();
+        qDebug() << "Send Vector " << "size : " << _d_coord.size();
         int count = 0;
         for (; _cons > 0; --_cons ) {
             if ( count >= _sizePost ) {
@@ -282,17 +281,22 @@ void My_TCPSocket::Send_Vector(vector<Point>, double cx, double cy)
             if ( _flagReadySend )
                 break;
 
-            if ( _cons == static_cast<unsigned>( _contour.size() ) ) {
-                Write_X01(920 - (_contour[_cons].x - _shift_x ) / _cx, (_contour[_cons].y + _shift_y) / _cy, 0, _power);
-            } else {
-                Write_X01(920 - (_contour[_cons].x - _shift_x ) / _cx, (_contour[_cons].y + _shift_y) / _cy, 1, _power);
+            if ( _cons % 2 == 0 ) {
+                if ( count == 0 || count == 1 ) {
+                    Write_X01(940 - ( (_d_coord[_cons].x - _shift_x ) + (static_cast<double>(_d_coord[_cons].x) / 940 * 18 + 8) ),
+                      _d_coord[_cons].y + _shift_y + ( (_d_coord[_cons].y / 600) * 3 ), _laser_on, _power);
+                } else {
+                    Write_X01(940 - ( (_d_coord[_cons].x - _shift_x) + (static_cast<double>(_d_coord[_cons].x) / 940 * 18 + 8) ),
+                      _d_coord[_cons].y + _shift_y + ( (_d_coord[_cons].y / 600) * 3 ), _laser_on, _power);
+                }
             }
+            //            qDebug() << "x: " << (_d_coord[_cons].x / 100)  << "y: " <<  (_d_coord[_cons].y / 100) * 0.4;
             count++;
         }
     }
     qDebug() << "end post";
     Write_X00();
-}
+}   // My_TCPSocket::Send_Vector
 
 void My_TCPSocket::SetShift(int x, int y)
 {
@@ -327,6 +331,7 @@ void My_TCPSocket::SetPower(int p)
 void My_TCPSocket::Reset()
 {
     _contour.clear();
+    _d_coord.clear();
     _flagReadySend = false;
     _cons = 0;
 }

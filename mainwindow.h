@@ -10,7 +10,7 @@
 #include <QGraphicsView>
 
 #include "my_tcpsocket.h"
-#include "contour_analysing.h"
+// #include "contour_analysing.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -19,6 +19,7 @@
 using namespace cv;
 
 class QTimer;
+class QTime;
 
 namespace Ui {
 class MainWindow;
@@ -32,10 +33,17 @@ public:
     explicit MainWindow(QWidget * parent = 0);
     ~MainWindow();
 
+public slots:
+    void talking(const QString &);
+    void talking2(const QString &);
+    void tr_Take_Contour(vector<vector<cv::Point> >, double, double);
+
 signals:
     void Quit();
     void NextFrame();
     void SetCoeff(int = -1, int = -1, int = -1);
+    void SetSendFlag();
+    void Take_Contour(vector<vector<cv::Point> >, double, double);
 
 private slots:
     void on_pushButton_4_clicked();
@@ -43,8 +51,6 @@ private slots:
     void imgShow(Mat const &, int);
 
     void on_pushButton_3_clicked();
-
-    void on_verticalSlider_valueChanged(int value);
 
     void on_verticalSlider_2_valueChanged(int value);
 
@@ -70,18 +76,23 @@ private slots:
 
     void on_pushButton_16_clicked();
 
+    void on_verticalSlider_sliderReleased();
+
+    void on_verticalSlider_valueChanged(int value);
+
 private:
     Ui::MainWindow * ui;
 
     My_TCPSocket * _socket;
-    contour_analysing * _contour;
+    //    contour_analysing * _contour;
 
     bool _socketState = false;
     QGraphicsScene * scene;
     QGraphicsPixmapItem * itm;
     QImage * dst;
-    QThread * th;
+    //    QThread * th;
     QTimer * _timer;
+    QTime * time;
 };
 
 #endif  // MAINWINDOW_H

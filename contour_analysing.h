@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QList>
 
 #include <vector>
 
@@ -35,11 +36,17 @@ public slots:
     void UpdateCoeff(int, int, int);
     void SetSendFlag(){ _flagToSend = true; }
 
+
 public:
 
     struct Coeff {
         double	x	= 0;
         double	y	= 0;
+    };
+
+    struct MouseCoord {
+        int x;
+        int y;
     };
 
 private:
@@ -54,6 +61,8 @@ private:
 
     QTime * time;
 
+    MouseCoord _mouseCoord;
+    QList<MouseCoord> _mouseCoordList;
     int min_con, max_con, wb;
     bool _flag = true;
     bool _flagToSend = false;

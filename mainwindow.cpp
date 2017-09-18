@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QThread>
 #include <QTimer>
+#include <QTime>
 
 #include "vector"
 
@@ -18,38 +19,48 @@ MainWindow::MainWindow(QWidget * parent) :
     qRegisterMetaType<vector<vector<cv::Point> > >("vector<vector<cv::Point>>");
 
     ui->setupUi(this);
-    th			= new QThread();
-    _contour	= new contour_analysing();
 
-    _contour->moveToThread(th);
-    th->start();
+    time = new QTime;
+    //    th			= new QThread();
+    //    _contour	= new contour_analysing();
 
-    connect(_contour, SIGNAL(Take_Frame(Mat const&,int)), this, SLOT(imgShow(Mat const&,int)));
-    connect(this, SIGNAL(NextFrame()), _contour, SLOT(NextFrame()));
-    connect(this, SIGNAL(SetCoeff(int,int,int)), _contour, SLOT(UpdateCoeff(int,int,int)));
+    //    _contour->moveToThread(th);
+    //    th->start();
 
-    QObject::connect(_contour, &contour_analysing::talking, [ = ](QString s){
-        ui->textBrowser->append(s);
-    });
+    //    connect(_contour, SIGNAL(Take_Frame(Mat const&,int)), this, SLOT(imgShow(Mat const&,int)));
+    //    connect(this, SIGNAL(NextFrame()), _contour, SLOT(NextFrame()));
+    //    connect(this, SIGNAL(SetCoeff(int,int,int)), _contour, SLOT(UpdateCoeff(int,int,int)));
+
+    //    QObject::connect(_contour, &contour_analysing::talking, [ = ](QString s){
+    //        ui->textBrowser->append(s);
+    //    });
 
     scene	= new QGraphicsScene;
     itm		= new QGraphicsPixmapItem;
     scene->addItem(itm);
     ui->graphicsView->setScene(scene);
-
-    _timer = new QTimer;
-    _timer->start(100);
-    connect(_timer, &QTimer::timeout, [](){
-        qDebug() << "Tick";
-    });
 }
 
 MainWindow::~MainWindow()
 {
     if ( _socketState )
         delete _socket;
-    delete _contour;
     delete ui;
+}
+
+void MainWindow::talking(const QString &s)
+{
+    ui->textBrowser->append(s);
+}
+
+void MainWindow::talking2(const QString &s)
+{
+    ui->textBrowser_2->append(s);
+}
+
+void MainWindow::tr_Take_Contour(vector<vector<Point> > v, double a, double b)
+{
+    emit Take_Contour(v, a, b);
 }
 
 void MainWindow::on_pushButton_4_clicked()
@@ -63,8 +74,7 @@ void MainWindow::on_pushButton_4_clicked()
 
         _socket->Connect(ui->lineEdit->text().toUShort() );
         _socketState = _socket->GetState();
-        connect(_contour, SIGNAL(Take_Contour(vector<vector<cv::Point> >,double,double)), _socket, SLOT(Send_Vector(vector<vector<cv::Point> >,double,double)));
-        // _socket->moveToThread(th);
+        connect(this, SIGNAL(Take_Contour(vector<vector<cv::Point> >,double,double)), _socket, SLOT(Send_Vector(vector<vector<cv::Point> >,double,double)));
         ui->pushButton_4->setText("close socket");
     } else {
         delete _socket;
@@ -82,7 +92,6 @@ void MainWindow::imgShow(const Mat &frame, int i)
 {
     Mat tmp;
 
-    qDebug() << "window on thread " << QObject::thread();
     frame.copyTo(tmp);
     cvtColor(tmp, tmp, CV_BGR2RGB);
     dst = new QImage(static_cast<uchar *>(tmp.data), tmp.cols, tmp.rows, static_cast<int>(tmp.step), QImage::Format_RGB888);
@@ -108,6 +117,9 @@ void MainWindow::on_pushButton_3_clicked()
     emit NextFrame();
 }
 
+void MainWindow::on_verticalSlider_sliderReleased()
+{ }
+
 void MainWindow::on_verticalSlider_valueChanged(int value)
 {
     emit SetCoeff(value);
@@ -131,7 +143,9 @@ void MainWindow::on_verticalSlider_3_valueChanged(int value)
 
 void MainWindow::on_pushButton_clicked()
 {
-    _contour->SetSendFlag();
+    if ( _socketState )
+        _socket->SetLaserState(ui->checkBox->checkState() );
+    emit SetSendFlag();
 }
 
 void MainWindow::on_pushButton_5_clicked()
@@ -188,10 +202,10 @@ void MainWindow::on_pushButton_15_clicked()
 {
     double x, y;
 
-    x	= ui->lineEdit_7->text().toDouble();
-    y	= ui->lineEdit_8->text().toDouble();
+    x	= ui->lineEdit_7->text().toDouble() + ui->lineEdit_3->text().toInt();
+    y	= ui->lineEdit_8->text().toDouble() + ui->lineEdit_4->text().toInt();
     if ( _socketState ) {
-        _socket->Write_X01(x, y, 0, 0);
+        _socket->Write_X01(x + x / (940 * 20) + 8, y, 0, 0);
         _socket->Write_X00();
     }
 }

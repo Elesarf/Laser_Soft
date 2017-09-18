@@ -31,6 +31,11 @@ public:
         S_READ
     };
 
+    struct d_Coordinate {
+        double	x;
+        double	y;
+    };
+
     struct Coordinate {
         int x;
         int y;
@@ -60,12 +65,13 @@ public slots:
     bool Write_String(QString);
 
     void Send_Vector(vector<vector<cv::Point> >, double, double);
-    void Send_Vector(vector<cv::Point>, double, double);
+    void Send_Vector();
 
     void SetShift(int, int);
     void SetSize(int);
     void SetSpeed(int);
     void SetPower(int);
+    void SetLaserState(bool l){ _laser_on = l; }
 
     void Reset();
 
@@ -77,6 +83,7 @@ private:
 
     QByteArray _buffer;
     vector<cv::Point> _contour;
+    vector<d_Coordinate> _d_coord;
 
     Coordinate _now_coordinate;
 
