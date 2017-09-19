@@ -23,7 +23,7 @@ contour_analysing::contour_analysing(QObject * parent) : QObject(parent)
     _coeff.y		= 0;
     _mouseCoord.x	= 0;
     _mouseCoord.y	= 0;
-    _mouseCoordList.clear();
+    _mouseCoordList_hide.clear();
 
     timer = new  QTimer;
 
@@ -231,7 +231,8 @@ void contour_analysing::Coordinator(Mat inImg)
     _coeff.x	= mask.cols / static_cast<double>(TABLE_WIDTH) + 160 / 940; // TODO: fuck this magic
     _coeff.y	= mask.rows / static_cast<double>( TABLE_HEIGHT);
 
-    for ( auto &l:_mouseCoordList ) {
+    vector<vector<Point> > contours_to_send;
+    for ( auto &l:_mouseCoordList_hide ) {
         if ( l.x != 0 || l.y != 0 ) {
             Point p;
             p.x = l.x;
@@ -244,9 +245,13 @@ void contour_analysing::Coordinator(Mat inImg)
                 for ( unsigned j = 0; j < contours[i].size(); ++j ) {
                     if ( x > cr.tl().x && x < cr.br().x ) {
                         if ( y > cr.tl().y && y < cr.br().y ) {
-                            //                            qDebug() << "Dot in contour " << i;
-                            contours.erase(contours.begin() + i);
-                            break;
+                            if ( !l.show ) {
+                                contours.erase(contours.begin() + i);
+                                break;
+                            } else {
+                                contours_to_send.push_back(contours[i]);
+                                break;
+                            }
                         }
                     }
                 }
@@ -254,7 +259,9 @@ void contour_analysing::Coordinator(Mat inImg)
         }
     }
 
-    drawContours(mask, contours, -1, Scalar(255), 1);
+    drawContours(mask, contours, -1, Scalar(70), 1);
+    drawContours(mask, contours_to_send, -1, Scalar(255), 1);
+
     for ( unsigned j = 0; j < contours.size(); ++j ) {
         Rect cr	= boundingRect(contours[j]);
         Point szMax(contours[j][0].x, contours[j][0].y), sz1_Min(contours[j][0].x, contours[j][0].y);
@@ -273,7 +280,7 @@ void contour_analysing::Coordinator(Mat inImg)
         int lenght	= std::abs(sz1_Min.x - szMax.x);
         int height	= std::abs(sz1_Min.y - szMax.y);
 
-        rectangle(mask, cr, Scalar(255), 1, 0);
+        rectangle(mask, cr, Scalar(125), 1, 0);
 
         putText(mask, QString(".").toStdString(), Point(sz1_Min.x, sz1_Min.y), 1, 6, Scalar(255), 1, 1);
 
@@ -293,25 +300,25 @@ void contour_analysing::Coordinator(Mat inImg)
     emit Take_Frame(mask, 2);
 
     imshow("ds", mask);
-    setMouseCallback("ds", myMouseCallback, &_mouseCoordList);
-    _mouseCoordList.size();
+    setMouseCallback("ds", myMouseCallback, &_mouseCoordList_hide);
+    _mouseCoordList_hide.size();
 
     talking(QString("coeff = %1 %2").arg(_coeff.x, 3, 'A', 10, QChar('0') ).arg(_coeff.y, 3, 'A', 10, QChar('0') ) );
     if ( _flagToSend ) {
-        emit Take_Contour(contours, _coeff.x, _coeff.y);
+        emit Take_Contour(contours_to_send, _coeff.x, _coeff.y);
         _flagToSend = false;
     }
 }   // contour_analysing::Coordinator
 
 void contour_analysing::NextFrame()
 {
-    _mouseCoordList.clear();
+    _mouseCoordList_hide.clear();
     _flag = true;
 }
 
 void myMouseCallback(int event, int x, int y, int flags, void * param)
 {
-    QList<contour_analysing::MouseCoord> * mcl = static_cast<QList<contour_analysing::MouseCoord> *>(param);
+    QList<contour_analysing::MouseCoord> * mclh = static_cast<QList<contour_analysing::MouseCoord> *>(param); \
     contour_analysing::MouseCoord mc;
     switch ( event ) {
         case CV_EVENT_MOUSEMOVE:
@@ -320,11 +327,14 @@ void myMouseCallback(int event, int x, int y, int flags, void * param)
         case CV_EVENT_LBUTTONDOWN:
             mc.x	= x;
             mc.y	= y;
-            mcl->append(mc);
+            mc.show = (flags == 40) ? false : true;
+            mclh->append(mc);
             //            qDebug() << "Mouse press" << x << " : " << y;
             break;
 
         case CV_EVENT_LBUTTONUP:
+            break;
+        case CV_EVENT_RBUTTONDOWN:
             break;
     }
 }

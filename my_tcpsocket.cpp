@@ -118,7 +118,7 @@ void My_TCPSocket::stateChanged(QAbstractSocket::SocketState stat)
     _contour.clear();
 }
 
-bool My_TCPSocket::Write_X01(double xt, double yt, int on = 0, int power = 0)
+bool My_TCPSocket::Write_X01(double xt, double yt, int on = 0, unsigned int power = 0)
 {
     QString s = "X01";
 
@@ -251,12 +251,15 @@ void My_TCPSocket::Send_Vector(vector<vector<cv::Point> > contour, double cx, do
     d_Coordinate tmp;
     auto end = contour.end();
     for ( auto it = contour.begin(); it != end; ++it ) {
-        for ( auto itt = it->begin(); itt != it->end(); ++itt ) {
-            if ( ( (itt->x < 4500) && (itt->x > 0) ) && ( (itt->y < 4500) && (itt->y > 0) ) ) {
-                tmp.x	= itt->x / cx;
-                tmp.y	= itt->y / cy;
-                _d_coord.push_back(tmp);
+        for ( unsigned i = 0; i < it->size(); ++i ) {
+            if ( ( (it->at(i).x < 1800) && (it->at(i).x > 0) ) && ( (it->at(i).y < 1400) && (it->at(i).y > 0) ) ) {
+                tmp.x		= it->at(i).x / cx;
+                tmp.y		= it->at(i).y / cy;
+                tmp.power	= _power;
+                tmp.on		= (i == 0) ? false : _laser_on;
+                tmp.on		= (i == it->size() - 1) ? false : _laser_on;
             }
+            _d_coord.push_back(tmp);
         }
     }
 
@@ -281,16 +284,9 @@ void My_TCPSocket::Send_Vector()
             if ( _flagReadySend )
                 break;
 
-            if ( _cons % 2 == 0 ) {
-                if ( count == 0 || count == 1 ) {
-                    Write_X01(940 - ( (_d_coord[_cons].x - _shift_x ) + (static_cast<double>(_d_coord[_cons].x) / 940 * 18 + 8) ),
-                      _d_coord[_cons].y + _shift_y + ( (_d_coord[_cons].y / 600) * 3 ), _laser_on, _power);
-                } else {
-                    Write_X01(940 - ( (_d_coord[_cons].x - _shift_x) + (static_cast<double>(_d_coord[_cons].x) / 940 * 18 + 8) ),
-                      _d_coord[_cons].y + _shift_y + ( (_d_coord[_cons].y / 600) * 3 ), _laser_on, _power);
-                }
-            }
-            //            qDebug() << "x: " << (_d_coord[_cons].x / 100)  << "y: " <<  (_d_coord[_cons].y / 100) * 0.4;
+            Write_X01(940 - ( (_d_coord[_cons].x - _shift_x ) + (static_cast<double>(_d_coord[_cons].x) / 16920 + 8) ),
+              _d_coord[_cons].y + _shift_y + ( _d_coord[_cons].y / 1800 ), _d_coord[_cons].on, _d_coord[_cons].power);
+
             count++;
         }
     }
@@ -324,7 +320,7 @@ void My_TCPSocket::SetSpeed(int s)
 void My_TCPSocket::SetPower(int p)
 {
     if ( (p > 2) && (p < 98) )
-        _power = p;
+        _power = static_cast<unsigned int>( p);
     talking(QString("set power %1").arg(_power) );
 }
 

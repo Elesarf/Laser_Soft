@@ -45,8 +45,9 @@ public:
     };
 
     struct MouseCoord {
-        int x;
-        int y;
+        int		x;
+        int		y;
+        bool	show;
     };
 
 private:
@@ -62,10 +63,10 @@ private:
     QTime * time;
 
     MouseCoord _mouseCoord;
-    QList<MouseCoord> _mouseCoordList;
+    QList<MouseCoord> _mouseCoordList_hide;
     int min_con, max_con, wb;
-    bool _flag = true;
-    bool _flagToSend = false;
+    bool _flag			= true;
+    bool _flagToSend	= false;
 };
 
 #endif  // CONTOUR_ANALYSING_H

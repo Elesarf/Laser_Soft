@@ -32,8 +32,11 @@ public:
     };
 
     struct d_Coordinate {
-        double	x;
-        double	y;
+        double			x;
+        double			y;
+
+        bool			on;
+        unsigned int	power;
     };
 
     struct Coordinate {
@@ -55,7 +58,7 @@ public slots:
     void readyRead();
     void stateChanged(QAbstractSocket::SocketState stat);
 
-    bool Write_X01(double, double, int, int);
+    bool Write_X01(double, double, int, unsigned int);
     bool Write_X00();
     bool Write_X02(int);
     bool Write_X42();
@@ -93,7 +96,7 @@ private:
     int _sizePost, _speed;
     double _cx, _cy;
 
-    int _power;
+    unsigned int _power;
     bool _laser_on;
 
     bool _state			= false;
