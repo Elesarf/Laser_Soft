@@ -6,12 +6,14 @@
 
 
 Q_DECLARE_METATYPE(cv::Point)
+Q_DECLARE_METATYPE(cv::Mat)
 Q_DECLARE_METATYPE(vector<vector<cv::Point> > )
 
 int main(int argc, char * argv[])
 {
     QApplication a(argc, argv);
 
+    qRegisterMetaType<cv::Mat>("Mat");
     qRegisterMetaType<cv::Point>("cv::Point");
     qRegisterMetaType<vector<vector<cv::Point> > >("vector<vector<cv::Point>>");
 
@@ -20,7 +22,6 @@ int main(int argc, char * argv[])
     QThread th;
 
     ca.moveToThread(&th);
-    th.start();
 
     QObject::connect(&ca, SIGNAL(Take_Frame(Mat const&,int)), &w, SLOT(imgShow(Mat const&,int)));
     QObject::connect(&ca, SIGNAL(talking(const QString&)), &w, SLOT(talking(const QString&)));
@@ -29,8 +30,14 @@ int main(int argc, char * argv[])
     QObject::connect(&w, SIGNAL(SetCoeff(int,int,int)), &ca, SLOT(UpdateCoeff(int,int,int)));
     QObject::connect(&w, SIGNAL(SetSendFlag()), &ca, SLOT(SetSendFlag()));
 
-
+    th.start();
     w.show();
+
+    QObject::connect(&w, &MainWindow::Quit, [&](){
+        ca.Stop();
+        th.exit();
+    });
+
     QObject::connect(&w, SIGNAL(Quit()), &a, SLOT(quit()));
 
     return a.exec();

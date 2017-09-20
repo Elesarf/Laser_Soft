@@ -21,6 +21,7 @@ class contour_analysing : public QObject
     Q_OBJECT
 public:
     explicit contour_analysing(QObject * parent = NULL);
+    ~contour_analysing();
 
 signals:
     void Take_Contour(vector<vector<cv::Point> >, double, double);
@@ -33,6 +34,7 @@ public slots:
     void Coordinator(Mat);
     void NextFrame();
     void Go();
+    void Stop();
     void UpdateCoeff(int, int, int);
     void SetSendFlag(){ _flagToSend = true; }
 

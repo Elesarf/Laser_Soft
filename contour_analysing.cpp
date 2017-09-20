@@ -25,9 +25,7 @@ contour_analysing::contour_analysing(QObject * parent) : QObject(parent)
     _mouseCoord.y	= 0;
     _mouseCoordList_hide.clear();
 
-    timer = new  QTimer;
-
-    time = new QTime;
+    timer = new  QTimer(this);
 
     string filename = "/home/laser/qt_proj/Laser_Pi_Test_Cam/build-unidistortion-Desktop_Qt_5_7_1_GCC_64bit-Debug/cam.yml";
     FileStorage fs(filename, FileStorage::READ);
@@ -39,6 +37,17 @@ contour_analysing::contour_analysing(QObject * parent) : QObject(parent)
         emit talking(QString("min %1, max %2, wb %3 ").arg(min_con).arg(max_con).arg(wb) );
     });
     timer->start(100);
+}
+
+contour_analysing::~contour_analysing()
+{
+    this->timer->stop();
+    timer->deleteLater();
+}
+
+void contour_analysing::Stop()
+{
+    timer->stop();
 }
 
 void contour_analysing::Go()
