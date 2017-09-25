@@ -13,6 +13,7 @@ My_TCPSocket::My_TCPSocket(QObject * parent) : QObject(parent)
     _speed		= 42;
     _power		= 0;
     _laser_on	= false;
+    flag_		= false;
 }
 
 void My_TCPSocket::Connect(quint16 port)
@@ -70,12 +71,7 @@ void My_TCPSocket::incommingConnect()
     connect(_socket, SIGNAL(readyRead()), this, SLOT(readyRead()));
     emit talking(QString("Connect %1").arg(_socket->socketDescriptor() ) );
     _sockets.append(_socket);
-    Write_X02(99);
-    Write_X01(120, 0, 0, 0);
-    Write_X00();
-    Write_X05(false);
-    Write_X04(false);
-
+    emit incommingConnectSignal();
     _flagReadyGo = true;
     timer->start(1000);
 }
@@ -92,10 +88,11 @@ void My_TCPSocket::readyRead()
     _buffer = _socket->readAll();
     QByteArray def = "KRYA\r\n";
     Write_X04(false);
-    if ( (_buffer == def) && (_cons > 0) ) {
+    if ( (_buffer == def) && flag_ ) {
         emit talking(QString("count = %1").arg(_cons) );
         _flagReadyGo = true;
-        Send_Vector();
+        //        Send_Vector();
+        emit nextPacket();
         //        qDebug() << _buffer;
     }
     if ( _buffer.length() >= 9 ) {
@@ -292,6 +289,18 @@ void My_TCPSocket::Send_Vector()
     }
     qDebug() << "end post";
     Write_X00();
+}
+
+void My_TCPSocket::sendCommand(QString str)
+{
+    for ( auto &s:_sockets ) {
+        qDebug() << s->write(str.toLocal8Bit().data() ) << str;
+    }
+}
+
+void My_TCPSocket::setSendingFlag(bool f)
+{
+    flag_ = f;
 }   // My_TCPSocket::Send_Vector
 
 void My_TCPSocket::SetShift(int x, int y)

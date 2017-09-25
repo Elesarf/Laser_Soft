@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QList>
+#include <QDebug>
 
 #include <vector>
 
@@ -38,6 +39,8 @@ public slots:
     void UpdateCoeff(int, int, int);
     void SetSendFlag(){ _flagToSend = true; }
 
+    void setCalibrateFlag(){ calibrateFlag_ = (calibrateFlag_) ? false : true; qDebug() << calibrateFlag_; }
+
 
 public:
 
@@ -66,9 +69,11 @@ private:
 
     MouseCoord _mouseCoord;
     QList<MouseCoord> _mouseCoordList_hide;
+    vector<Point2f> * outputCorners_;
     int min_con, max_con, wb;
-    bool _flag			= true;
+    bool _flag = true;
     bool _flagToSend	= false;
+    bool calibrateFlag_ = false;
 };
 
 #endif  // CONTOUR_ANALYSING_H

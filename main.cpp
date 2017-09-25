@@ -29,6 +29,7 @@ int main(int argc, char * argv[])
     QObject::connect(&w, SIGNAL(NextFrame()), &ca, SLOT(NextFrame()));
     QObject::connect(&w, SIGNAL(SetCoeff(int,int,int)), &ca, SLOT(UpdateCoeff(int,int,int)));
     QObject::connect(&w, SIGNAL(SetSendFlag()), &ca, SLOT(SetSendFlag()));
+    QObject::connect(&w, SIGNAL(setCalibrateFlag()), &ca, SLOT(setCalibrateFlag()));
 
     th.start();
     w.show();
@@ -41,4 +42,4 @@ int main(int argc, char * argv[])
     QObject::connect(&w, SIGNAL(Quit()), &a, SLOT(quit()));
 
     return a.exec();
-}
+} // main

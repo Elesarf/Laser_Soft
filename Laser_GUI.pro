@@ -36,10 +36,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += main.cpp\
         mainwindow.cpp \
     contour_analysing.cpp \
-    my_tcpsocket.cpp
+    my_tcpsocket.cpp \
+    laser_machine.cpp
 
 HEADERS  += mainwindow.h \
     contour_analysing.h \
-    my_tcpsocket.h
+    my_tcpsocket.h \
+    laser_machine.h
 
 FORMS    += mainwindow.ui

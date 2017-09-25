@@ -47,6 +47,8 @@ public:
 signals:
     void imgComplete(const QByteArray &, char, char, uint16_t);
     void talking(const QString &);
+    void nextPacket();
+    void incommingConnectSignal();
 public slots:
     void Connect(quint16);
     void Connect();
@@ -69,6 +71,9 @@ public slots:
 
     void Send_Vector(vector<vector<cv::Point> >, double, double);
     void Send_Vector();
+
+    void sendCommand(QString);
+    void setSendingFlag(bool);
 
     void SetShift(int, int);
     void SetSize(int);
@@ -100,7 +105,7 @@ private:
     bool _laser_on;
 
     bool _state			= false;
-    bool flag			= false;
+    bool flag_			= false;
     bool _flagReadyGo	= false;
     bool _flagReadySend = false;
 };

@@ -10,7 +10,7 @@
 #include <QGraphicsView>
 
 #include "my_tcpsocket.h"
-// #include "contour_analysing.h"
+#include "laser_machine.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
@@ -43,6 +43,8 @@ signals:
     void NextFrame();
     void SetCoeff(int = -1, int = -1, int = -1);
     void SetSendFlag();
+    void setCalibrateFlag();
+    void setShift(int);
     void Take_Contour(vector<vector<cv::Point> >, double, double);
 
 private slots:
@@ -80,17 +82,20 @@ private slots:
 
     void on_verticalSlider_valueChanged(int value);
 
+    void on_pushButton_17_clicked();
+
+    void on_pushButton_18_clicked();
+
 private:
     Ui::MainWindow * ui;
 
     My_TCPSocket * _socket;
-    //    contour_analysing * _contour;
+    Laser_Machine * laserMachine_;
 
     bool _socketState = false;
     QGraphicsScene * scene;
     QGraphicsPixmapItem * itm;
     QImage * dst;
-    //    QThread * th;
     QTimer * _timer;
     QTime * time;
 };

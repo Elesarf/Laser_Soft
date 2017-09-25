@@ -26,6 +26,7 @@ contour_analysing::contour_analysing(QObject * parent) : QObject(parent)
     _mouseCoordList_hide.clear();
 
     timer = new  QTimer(this);
+    outputCorners_ = new vector<Point2f>(4);
 
     string filename = "/home/laser/qt_proj/Laser_Pi_Test_Cam/build-unidistortion-Desktop_Qt_5_7_1_GCC_64bit-Debug/cam.yml";
     FileStorage fs(filename, FileStorage::READ);
@@ -36,7 +37,7 @@ contour_analysing::contour_analysing(QObject * parent) : QObject(parent)
         Go();
         emit talking(QString("min %1, max %2, wb %3 ").arg(min_con).arg(max_con).arg(wb) );
     });
-    timer->start(100);
+    timer->start(600);
 }
 
 contour_analysing::~contour_analysing()
@@ -116,7 +117,7 @@ void contour_analysing::Contour_Analys(Mat fr)
 
     cvtColor(tmp, tmp, CV_GRAY2BGR);
 
-    emit Take_Frame(tmp, 4);
+    //    emit Take_Frame(tmp, 4);
 
     if ( contours.size() >= 4 ) {
         _p4.x	= contours[0][0].x;
@@ -171,12 +172,14 @@ void contour_analysing::Contour_Analys(Mat fr)
     //    _p3 = _p4;
     //    _p4 = pt;
 
-    vector<Point2f> outputCorners(4);
-    outputCorners[0]	= _p1;
-    outputCorners[1]	= _p2;
-    outputCorners[2]	= _p3;
-    outputCorners[3]	= _p4;
-    Rect br = boundingRect(outputCorners);
+    if ( calibrateFlag_ ) {
+        outputCorners_ = new vector<Point2f>(4);
+        outputCorners_->at(0)	= _p1;
+        outputCorners_->at(1)	= _p2;
+        outputCorners_->at(2)	= _p3;
+        outputCorners_->at(3)	= _p4;
+    }
+    Rect br = boundingRect(*outputCorners_);
 
 
     vector<Point2f> inputCorners(4);
@@ -188,7 +191,7 @@ void contour_analysing::Contour_Analys(Mat fr)
     inputCorners[3].x	= br.tl().x;
     inputCorners[3].y	= br.br().y;
 
-    Mat M = getPerspectiveTransform(outputCorners, inputCorners);
+    Mat M = getPerspectiveTransform(*outputCorners_, inputCorners);
     Mat out;
 
     warpPerspective(frame, out, M, Size(FRAME_WIDTH, FRAME_HEIGHT) );
@@ -201,11 +204,12 @@ void contour_analysing::Contour_Analys(Mat fr)
     for ( int i = 0; i < FRAME_HEIGHT; i += 200 ) {
         putText(frame, QString::number(i).toStdString(), Point(10, i), 1, 1, Scalar(0, 0, 125), 1, 1);
     }
-
-    putText(frame, QString(".1 %1:%2").arg(_p1.x).arg(_p1.y).toStdString(), _p1, 1, 2, Scalar(0, 0, 125), 2, 1);
-    putText(frame, QString(".2 %1:%2").arg(_p2.x).arg(_p2.y).toStdString(), _p2, 1, 2, Scalar(0, 0, 125), 2, 1);
-    putText(frame, QString(".3 %1:%2").arg(_p3.x).arg(_p3.y).toStdString(), _p3, 1, 2, Scalar(0, 0, 125), 2, 1);
-    putText(frame, QString(".4 %1:%2").arg(_p4.x).arg(_p4.y).toStdString(), _p4, 1, 2, Scalar(0, 0, 125), 2, 1);
+    if ( calibrateFlag_ ) {
+        putText(frame, QString(".1 %1:%2").arg(_p1.x).arg(_p1.y).toStdString(), _p1, 1, 3, Scalar(0, 0, 125), 2, 1);
+        putText(frame, QString(".2 %1:%2").arg(_p2.x).arg(_p2.y).toStdString(), _p2, 1, 3, Scalar(0, 0, 125), 2, 1);
+        putText(frame, QString(".3 %1:%2").arg(_p3.x).arg(_p3.y).toStdString(), _p3, 1, 3, Scalar(0, 0, 125), 2, 1);
+        putText(frame, QString(".4 %1:%2").arg(_p4.x).arg(_p4.y).toStdString(), _p4, 1, 3, Scalar(0, 0, 125), 2, 1);
+    }
     out = out(br);
     Mat tmp1;
     flip(out, tmp1, 1);
@@ -312,7 +316,7 @@ void contour_analysing::Coordinator(Mat inImg)
     setMouseCallback("ds", myMouseCallback, &_mouseCoordList_hide);
     _mouseCoordList_hide.size();
 
-    talking(QString("coeff = %1 %2").arg(_coeff.x, 3, 'A', 10, QChar('0') ).arg(_coeff.y, 3, 'A', 10, QChar('0') ) );
+    emit talking(QString("coeff = %1 %2").arg(_coeff.x, 3, 'A', 10, QChar('0') ).arg(_coeff.y, 3, 'A', 10, QChar('0') ) );
     if ( _flagToSend ) {
         emit Take_Contour(contours_to_send, _coeff.x, _coeff.y);
         _flagToSend = false;
