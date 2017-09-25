@@ -53,16 +53,14 @@ void contour_analysing::Stop()
 
 void contour_analysing::Go()
 {
-    Mat rview, map1, map2;
+    Mat map1, map2;
 
     initUndistortRectifyMap(_cam_matrix, _dist_coeff, Mat(), getOptimalNewCameraMatrix(_cam_matrix, _dist_coeff, Size2i(2048, 1526), 1, Size2d(2048, 1526), 0), Size2d(2048,
       1526), CV_16SC2, map1, map2);
 
     if ( _flag ) {
-        _frame = imread("/home/laser/raspberry_fs/pi/shr/1.jpg");
-        //        remap(_frame, rview, map1, map2, INTER_LINEAR);
-        //        rview.copyTo(_frame);
-        _flag = false;
+        _frame	= imread("/home/laser/raspberry_fs/pi/shr/1.jpg");
+        _flag	= false;
     }
     if ( !_frame.empty() ) {
         Contour_Analys(_frame);
@@ -82,11 +80,11 @@ void contour_analysing::UpdateCoeff(int min_con, int max_con, int wb)
 
 void contour_analysing::Contour_Analys(Mat fr)
 {
-    //    qDebug() << "Debug: CA";
     Mat frame;
 
     fr.copyTo(frame);
-    emit Take_Frame(frame, 1);
+    if ( calibrateFlag_ )
+        emit Take_Frame(frame, 1);
     cv::Mat HSV, threshold;
     cv::cvtColor(frame, HSV, CV_BGR2HSV);
     inRange(HSV, Scalar(22, 115, 170), Scalar(34, 255, 255), threshold);
@@ -102,7 +100,6 @@ void contour_analysing::Contour_Analys(Mat fr)
     }
 
     for ( unsigned i = 0; i < contours.size(); ++i ) {
-        //        qDebug() << " -> " <<   contours[i].size();
         if ( contours[i].size() < static_cast<unsigned>(SIZE_MIN_MARKER) ) {
             contours.erase(contours.begin() + i);
         }
@@ -165,13 +162,6 @@ void contour_analysing::Contour_Analys(Mat fr)
         }
     }
 
-    //    Point pt = _p1;
-    //    _p1 = _p2;
-    //    _p2 = pt;
-    //    pt	= _p3;
-    //    _p3 = _p4;
-    //    _p4 = pt;
-
     if ( calibrateFlag_ ) {
         outputCorners_ = new vector<Point2f>(4);
         outputCorners_->at(0)	= _p1;
@@ -209,12 +199,17 @@ void contour_analysing::Contour_Analys(Mat fr)
         putText(frame, QString(".2 %1:%2").arg(_p2.x).arg(_p2.y).toStdString(), _p2, 1, 3, Scalar(0, 0, 125), 2, 1);
         putText(frame, QString(".3 %1:%2").arg(_p3.x).arg(_p3.y).toStdString(), _p3, 1, 3, Scalar(0, 0, 125), 2, 1);
         putText(frame, QString(".4 %1:%2").arg(_p4.x).arg(_p4.y).toStdString(), _p4, 1, 3, Scalar(0, 0, 125), 2, 1);
+
+        line(frame, _p1, _p2, Scalar(0, 125, 0), 5, 1, 0);
+        line(frame, _p2, _p3, Scalar(0, 125, 0), 5, 1, 0);
+        line(frame, _p3, _p4, Scalar(0, 125, 0), 5, 1, 0);
+        line(frame, _p4, _p1, Scalar(0, 125, 0), 5, 1, 0);
     }
     out = out(br);
     Mat tmp1;
     flip(out, tmp1, 1);
-    emit Take_Frame(frame, 1);
-    //    imshow("dsdsds", frame);
+    if ( calibrateFlag_ )
+        emit Take_Frame(frame, 1);
     Coordinator(tmp1);
 }   // contour_analysing::Contour_Analys
 
@@ -222,7 +217,6 @@ void myMouseCallback(int event, int x, int y, int flags, void * param);
 
 void contour_analysing::Coordinator(Mat inImg)
 {
-    //    qDebug() << "Debug: Coord";
     emit Take_Frame(inImg, 3);
 
     cv::Mat HSV, threshold;
@@ -342,7 +336,6 @@ void myMouseCallback(int event, int x, int y, int flags, void * param)
             mc.y	= y;
             mc.show = (flags == 40) ? false : true;
             mclh->append(mc);
-            //            qDebug() << "Mouse press" << x << " : " << y;
             break;
 
         case CV_EVENT_LBUTTONUP:

@@ -20,8 +20,6 @@ MainWindow::MainWindow(QWidget * parent) :
 
     ui->setupUi(this);
 
-    //    time = new QTime;
-
     scene	= new QGraphicsScene;
     itm		= new QGraphicsPixmapItem;
     scene->addItem(itm);
@@ -145,7 +143,6 @@ void MainWindow::on_verticalSlider_3_valueChanged(int value)
 void MainWindow::on_pushButton_clicked()
 {
     if ( _socketState ) {
-        //        _socket->SetLaserState(ui->checkBox->checkState() );
         laserMachine_->setBurnyState(ui->checkBox->checkState() );
     }
 
@@ -155,7 +152,6 @@ void MainWindow::on_pushButton_clicked()
 void MainWindow::on_pushButton_5_clicked()
 {
     if ( _socketState ) {
-        //        _socket->SetShift(ui->lineEdit_3->text().toInt(), ui->lineEdit_4->text().toInt() );
         laserMachine_->setShift(ui->lineEdit_3->text().toInt(), ui->lineEdit_4->text().toInt() );
     }
 }
@@ -163,7 +159,6 @@ void MainWindow::on_pushButton_5_clicked()
 void MainWindow::on_lineEdit_2_editingFinished()
 {
     if ( _socketState ) {
-        //        _socket->SetSize(ui->lineEdit_2->text().toInt() );
         laserMachine_->setSizePacket(ui->lineEdit_2->text().toInt() );
     }
 }
@@ -171,9 +166,6 @@ void MainWindow::on_lineEdit_2_editingFinished()
 void MainWindow::on_pushButton_6_clicked()
 {
     if ( _socketState ) {
-        //        _socket->Write_X42();
-        //        _socket->Reset();
-
         laserMachine_->command_X42();
         laserMachine_->resetState();
     }
@@ -182,7 +174,6 @@ void MainWindow::on_pushButton_6_clicked()
 void MainWindow::on_pushButton_7_clicked()
 {
     if ( _socketState ) {
-        //        _socket->Write_X00();
         laserMachine_->command_X00();
     }
 }
@@ -190,7 +181,6 @@ void MainWindow::on_pushButton_7_clicked()
 void MainWindow::on_pushButton_8_clicked()
 {
     if ( _socketState ) {
-        //        _socket->SetSpeed(ui->lineEdit_5->text().toInt() );
         laserMachine_->setSpeed(ui->lineEdit_5->text().toInt() );
     }
 }
@@ -198,20 +188,13 @@ void MainWindow::on_pushButton_8_clicked()
 void MainWindow::on_pushButton_9_clicked()
 {
     if ( _socketState ) {
-        laserMachine_->command_X04();
-        //        if ( _socket->Get_Laser_State() )
-        //            _socket->Write_X04(true);
-        //        ui->pushButton_9->setText("piu_off");
-        //    } else {
-        //        _socket->Write_X04(false);
-        //        ui->pushButton_9->setText("piu_on");
+        laserMachine_->command_X04(true);
     }
 }
 
 void MainWindow::on_pushButton_10_clicked()
 {
     if ( _socketState ) {
-        //        _socket->SetPower(ui->lineEdit_6->text().toInt() );
         laserMachine_->setPowerLaser(ui->lineEdit_6->text().toUInt() );
     }
 }
@@ -223,9 +206,6 @@ void MainWindow::on_pushButton_15_clicked()
     x	= ui->lineEdit_7->text().toDouble();
     y	= ui->lineEdit_8->text().toDouble();
     if ( _socketState ) {
-        //        _socket->Write_X01(x + x / (940 * 20) + 8, y, 0, 0);
-        //        _socket->Write_X00();
-
         laserMachine_->command_X01(x, y, 0, 0);
         laserMachine_->command_X00();
     }
@@ -234,7 +214,6 @@ void MainWindow::on_pushButton_15_clicked()
 void MainWindow::on_pushButton_16_clicked()
 {
     if ( _socketState ) {
-        //        _socket->Write_X03();
         laserMachine_->command_X03();
     }
 }

@@ -5,20 +5,13 @@
 
 My_TCPSocket::My_TCPSocket(QObject * parent) : QObject(parent)
 {
-    _server		= new QTcpServer(this);
-    _shift_x	= 0;
-    _shift_y	= 0;
-    _sizePost	= 200;
-    _cons		= 0;
-    _speed		= 42;
-    _power		= 0;
-    _laser_on	= false;
-    flag_		= false;
+    _server	= new QTcpServer(this);
+    flag_	= false;
 }
 
 void My_TCPSocket::Connect(quint16 port)
 {
-    if ( !_state ) {
+    if ( !state_ ) {
         timer = new QTimer;
         timer->setSingleShot(true);
 
@@ -30,13 +23,13 @@ void My_TCPSocket::Connect(quint16 port)
             }
             timer->start(1000);
         });
-        emit talking(QString("Message: server up on port %1 , listen %2 ").arg(port).arg(_state = _server->listen(QHostAddress::AnyIPv4, port) ) );
+        emit talking(QString("Message: server up on port %1 , listen %2 ").arg(port).arg(state_ = _server->listen(QHostAddress::AnyIPv4, port) ) );
     }
 }
 
 void My_TCPSocket::Connect()
 {
-    if ( !_state ) {
+    if ( !state_ ) {
         timer = new QTimer;
         timer->setSingleShot(true);
 
@@ -49,7 +42,7 @@ void My_TCPSocket::Connect()
             }
             timer->start(100);
         });
-        emit talking(QString("Message: server up on default port (1236) , listen %1 ").arg(_state =  _server->listen(QHostAddress::AnyIPv4, 1236) ) );
+        emit talking(QString("Message: server up on default port (1236) , listen %1 ").arg(state_ =  _server->listen(QHostAddress::AnyIPv4, 1236) ) );
     }
 }
 
@@ -59,7 +52,6 @@ My_TCPSocket::~My_TCPSocket()
     delete  _server;
     _sockets.clear();
     delete timer;
-    //    delete  sendTimer;
 }
 
 void My_TCPSocket::incommingConnect()
@@ -72,7 +64,6 @@ void My_TCPSocket::incommingConnect()
     emit talking(QString("Connect %1").arg(_socket->socketDescriptor() ) );
     _sockets.append(_socket);
     emit incommingConnectSignal();
-    _flagReadyGo = true;
     timer->start(1000);
 }
 
@@ -85,211 +76,29 @@ void My_TCPSocket::readyRead()
 
     QTcpSocket * _socket = static_cast<QTcpSocket *>(object);
     emit talking(QString("ReadyRead %1").arg(_socket->socketDescriptor() ) );
-    _buffer = _socket->readAll();
-    QByteArray def = "KRYA\r\n";
-    Write_X04(false);
-    if ( (_buffer == def) && flag_ ) {
-        emit talking(QString("count = %1").arg(_cons) );
-        _flagReadyGo = true;
-        //        Send_Vector();
+    QByteArray buffer = _socket->readAll();
+    //    QByteArray def = "KRYA\r\n";
+    if ( (buffer == "KRYA\r\n") && flag_ ) {
         emit nextPacket();
-        //        qDebug() << _buffer;
     }
-    if ( _buffer.length() >= 9 ) {
-        if ( (_buffer[0] == 'x') && (_buffer[5] == 'y') ) {
+    if ( buffer.length() >= 9 ) {
+        if ( (buffer[0] == 'x') && (buffer[5] == 'y') ) {
             QString s;
-            s = QString::fromLatin1(_buffer);
+            s = QString::fromLatin1(buffer);
             s.prepend("Now coordinates ");
-            //            qDebug() << _buffer;
             emit talking(s);
         }
     }
 
-    _buffer.clear();
+    buffer.clear();
 }
 
 void My_TCPSocket::stateChanged(QAbstractSocket::SocketState stat)
 {
     emit talking(QString("Message: state change %1").arg(stat) );
-
-    _contour.clear();
 }
 
-bool My_TCPSocket::Write_X01(double xt, double yt, int on = 0, unsigned int power = 0)
-{
-    QString s = "X01";
-
-    xt	*= 10;
-    yt	*= 10;
-    int x	= static_cast<int>(xt);
-    int y	= static_cast<int>(yt);
-
-    if ( ( (x < 20000) && ( y < 20000) ) && ( (x >= 0) && ( y >= 0) ) ) {
-        s.append(QString("%1%2%3%4").arg(x, 4, 10, QChar('0') ).arg(y, 4, 10, QChar('0') ).arg(on, 1, 10, QChar('0') ).arg(power, 2, 10, QChar('0') ) );
-        QByteArray ba;
-        ba.append(QByteArray::fromStdString(s.toStdString() ) );
-        ba.append(0x0D);
-        ba.append(0x0A);
-        for ( auto &s:_sockets ) {
-            qDebug() << s->write(ba) << ba;
-        }
-        return true;
-    } else {
-        return false;
-    }
-}   // My_TCPSocket::Write_X01
-
-bool My_TCPSocket::Write_X00()
-{
-    QString s;
-    QByteArray ba;
-
-    s.clear();
-    s = "X00";
-    ba.clear();
-    ba.append(QByteArray::fromStdString(s.toStdString() ) );
-    ba.append(0x0D);
-    ba.append(0x0A);
-    for ( int i = 0; i < _sockets.length(); ++i ) {
-        qDebug() << "Write to socket " <<  _sockets[i]->write(ba) << ba;
-    }
-    return true;
-}
-
-bool My_TCPSocket::Write_X02(int speed)
-{
-    if ( (speed > 350) || (speed < 0) )
-        return false;
-
-    QString s;
-    QByteArray ba;
-
-    s.clear();
-    s.append("X02");
-    s.append(QString("%1%2%3").arg(speed / 100).arg( (speed - (speed / 100) * 100) / 10 ).arg(speed % 10) );
-    ba.clear();
-    ba.append(QByteArray::fromStdString(s.toStdString() ) );
-    ba.append(0x0D);
-    ba.append(0x0A);
-    for ( int i = 0; i < _sockets.length(); ++i ) {
-        qDebug() << "Write to socket " <<  _sockets[i]->write(ba) << ba;
-    }
-    return true;
-}
-
-bool My_TCPSocket::Write_X42()
-{
-    QString s;
-    QByteArray ba;
-
-    s.clear();
-    s = "X42";
-    ba.clear();
-    ba.append(QByteArray::fromStdString(s.toStdString() ) );
-    ba.append(0x0D);
-    ba.append(0x0A);
-    for ( int i = 0; i < _sockets.length(); ++i ) {
-        qDebug() << "Write to socket " <<  _sockets[i]->write(ba) << ba;
-    }
-    return true;
-}
-
-bool My_TCPSocket::Write_X03()  // give now coordinate
-{
-    for ( auto &s:_sockets ) {
-        Write_X04(false);
-        qDebug() << s->write(QByteArray("X03").append(0x0D).append(0X0A) ) << "X03";
-    }
-    return true;
-}
-
-bool My_TCPSocket::Write_X04(bool on)   // laser piupiu on:power
-{
-    if ( on ) {
-        for ( auto &s:_sockets ) {
-            qDebug()
-                << s->write(QByteArray("X04").append(QString("%1%2").arg(1, 1, 10, QChar('0') ).arg(_power, 2, 10, QChar('0') ) ).append(0x0D).append(0X0A) ) << "X04:1";
-        }
-        //        _laser_on = 1;
-        return true;
-    } else {
-        for ( auto &s:_sockets ) {
-            qDebug()
-                << s->write(QByteArray("X04").append(QString("%1%2").arg(0, 1, 10, QChar('0') ).arg(_power, 2, 10, QChar('0') ) ).append(0x0D).append(0X0A) ) << "X04:0";
-        }
-        //        _laser_on = 0;
-        return false;
-    }
-}
-
-bool My_TCPSocket::Write_X05(bool on)
-{
-    if ( !on ) {
-        for ( auto &s:_sockets ) {
-            qDebug() << s->write(QByteArray("X051").append(0x0D).append(0X0A) ) << "X051";
-        }
-    } else {
-        for ( auto &s:_sockets ) {
-            qDebug() << s->write(QByteArray("X050").append(0x0D).append(0X0A) ) << "X050";
-        }
-    }
-    return true;
-}
-
-bool My_TCPSocket::Write_String(QString)
-{
-    return true;
-}
-
-void My_TCPSocket::Send_Vector(vector<vector<cv::Point> > contour, double cx, double cy)
-{
-    _d_coord.clear();
-
-    d_Coordinate tmp;
-    auto end = contour.end();
-    for ( auto it = contour.begin(); it != end; ++it ) {
-        for ( unsigned i = 0; i < it->size(); ++i ) {
-            if ( ( (it->at(i).x < 1800) && (it->at(i).x > 0) ) && ( (it->at(i).y < 1400) && (it->at(i).y > 0) ) ) {
-                tmp.x		= it->at(i).x / cx;
-                tmp.y		= it->at(i).y / cy;
-                tmp.power	= _power;
-                tmp.on		= (i == 0) ? false : _laser_on;
-                tmp.on		= (i == it->size() - 1) ? false : _laser_on;
-            }
-            _d_coord.push_back(tmp);
-        }
-    }
-
-    _flagReadySend	= false;
-    _cons			= static_cast<unsigned>( _d_coord.size() - 1);
-    Write_X02(_speed);
-    Send_Vector();
-}   // My_TCPSocket::Send_Vector
-
-void My_TCPSocket::Send_Vector()
-{
-    _flagReadySend = false;
-    if ( _flagReadyGo ) {
-        qDebug() << "Send Vector " << "size : " << _d_coord.size();
-        int count = 0;
-        for (; _cons > 0; --_cons ) {
-            if ( count >= _sizePost ) {
-                count = 0;
-                _flagReadyGo	= true;
-                _flagReadySend	= true;
-            }
-            if ( _flagReadySend )
-                break;
-
-            Write_X01(940 - ( (_d_coord[_cons].x - _shift_x ) + (static_cast<double>(_d_coord[_cons].x) / 16920 + 8) ),
-              _d_coord[_cons].y + _shift_y + ( _d_coord[_cons].y / 1800 ), _d_coord[_cons].on, _d_coord[_cons].power);
-
-            count++;
-        }
-    }
-    qDebug() << "end post";
-    Write_X00();
-}
+// My_TCPSocket::Write_X01
 
 void My_TCPSocket::sendCommand(QString str)
 {
@@ -302,44 +111,6 @@ void My_TCPSocket::setSendingFlag(bool f)
 {
     flag_ = f;
 }   // My_TCPSocket::Send_Vector
-
-void My_TCPSocket::SetShift(int x, int y)
-{
-    if ( ( x > (-100) ) && ( x < (100) ) )
-        _shift_x = x;
-    if ( ( y > (-100) ) && ( y < (100) ) )
-        _shift_y = y;
-}
-
-void My_TCPSocket::SetSize(int s)
-{
-    if ( ( s > (10) ) && ( s < (1000) ) )
-        _sizePost = s;
-    talking(QString("setting size %1").arg(_sizePost) );
-}
-
-void My_TCPSocket::SetSpeed(int s)
-{
-    if ( ( s > (10) ) && ( s < (250) ) )
-        _speed = s;
-    talking(QString("setting speed %1").arg(_speed) );
-    Write_X02(_speed);
-}
-
-void My_TCPSocket::SetPower(int p)
-{
-    if ( (p > 2) && (p < 98) )
-        _power = static_cast<unsigned int>( p);
-    talking(QString("set power %1").arg(_power) );
-}
-
-void My_TCPSocket::Reset()
-{
-    _contour.clear();
-    _d_coord.clear();
-    _flagReadySend = false;
-    _cons = 0;
-}
 
 //
 //

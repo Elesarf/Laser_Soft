@@ -139,47 +139,49 @@ void Laser_Machine::command_X42()
 
 void Laser_Machine::prepareContour(vector<vector<cv::Point> > c, double cx, double cy)
 {
-    DotCoordinateState tmp;
-    DotCoordinateState min(1000, 1000, 0, 0);
-    DotCoordinateState max(0, 0, 0, 0);
-    DotCoordinateState center(0, 0, 0, 0);
+    if ( c.size() > 0 ) {
+        DotCoordinateState tmp;
+        DotCoordinateState min(1000, 1000, 0, 0);
+        DotCoordinateState max(0, 0, 0, 0);
+        DotCoordinateState center(0, 0, 0, 0);
 
-    dotsToBurn_.clear();
+        dotsToBurn_.clear();
 
-    for ( auto it = c.begin(); it != c.end(); ++it ) {
-        for ( unsigned int i = 0; i < it->size(); ++i ) {
-            if ( it->at(i).x > max.x ) max.x = it->at(i).x;
-            if ( it->at(i).y > max.y ) max.y = it->at(i).y;
+        for ( auto it = c.begin(); it != c.end(); ++it ) {
+            for ( unsigned int i = 0; i < it->size(); ++i ) {
+                if ( it->at(i).x > max.x ) max.x = it->at(i).x;
+                if ( it->at(i).y > max.y ) max.y = it->at(i).y;
 
-            if ( it->at(i).x < min.x ) min.x = it->at(i).x;
-            if ( it->at(i).y < min.y ) min.y = it->at(i).y;
-        }
-    }
-
-    center.x	= (max.x + min.x) / 2;
-    center.y	= (max.y + min.y) / 2;
-
-    for ( auto it = c.begin(); it != c.end(); ++it ) {
-        for ( unsigned int i = 0; i < it->size(); ++i ) {
-            if ( it->at(i).x < center.x ) {
-                tmp.x = (it->at(i).x / cx) * 1.03;
-            } else {
-                tmp.x = (it->at(i).x / cx) / 0.97;
+                if ( it->at(i).x < min.x ) min.x = it->at(i).x;
+                if ( it->at(i).y < min.y ) min.y = it->at(i).y;
             }
-            if ( it->at(i).y < center.y ) {
-                tmp.y = (it->at(i).y / cy) * 1.03;
-            } else {
-                tmp.y = (it->at(i).y / cy) / 0.97;
-            }
-            tmp.power	= power_;
-            tmp.laserOn = (i == 0 || i == it->size() - 1 || i == it->size() - 2 || i == 1) ? false : burnyState_;
-            dotsToBurn_.push_back(tmp);
         }
-    }
 
-    cons_ = static_cast<unsigned>(dotsToBurn_.size() - 1);
-    command_X02();
-    sendToLaser();
+        center.x	= (max.x + min.x) / 2;
+        center.y	= (max.y + min.y) / 2;
+
+        for ( auto it = c.begin(); it != c.end(); ++it ) {
+            for ( unsigned int i = 0; i < it->size(); ++i ) {
+                if ( it->at(i).x < center.x ) {
+                    tmp.x = (it->at(i).x / cx) * 1.03;
+                } else {
+                    tmp.x = (it->at(i).x / cx) / 0.97;
+                }
+                if ( it->at(i).y < center.y ) {
+                    tmp.y = (it->at(i).y / cy) * 1.03;
+                } else {
+                    tmp.y = (it->at(i).y / cy) / 0.97;
+                }
+                tmp.power	= power_;
+                tmp.laserOn = (i == 0 || i == it->size() - 1 || i == it->size() - 2 || i == 1) ? false : burnyState_;
+                dotsToBurn_.push_back(tmp);
+            }
+        }
+
+        cons_ = static_cast<unsigned>(dotsToBurn_.size() - 1);
+        command_X02();
+        sendToLaser();
+    }
 }   // Laser_Machine::prepareContour
 
 void Laser_Machine::sendToLaser()
