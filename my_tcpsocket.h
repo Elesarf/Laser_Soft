@@ -45,6 +45,7 @@ private:
     QTcpServer * _server;
     QList<QTcpSocket *> _sockets;
     QTimer * timer;
+    QString buffer_;
 
     bool state_	= false;
     bool flag_	= false;

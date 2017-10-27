@@ -11,15 +11,18 @@ My_TCPSocket::My_TCPSocket(QObject * parent) : QObject(parent)
 
 void My_TCPSocket::Connect(quint16 port)
 {
+    buffer_.clear();
     if ( !state_ ) {
-        timer = new QTimer;
+        timer = new QTimer(this);
         timer->setSingleShot(true);
 
         connect(_server, SIGNAL(newConnection()), this, SLOT(incommingConnect()));
         connect(timer, &QTimer::timeout, [this](){
             for ( int i = 0; i < _sockets.length(); ++i ) {
-                if ( _sockets[i]->state() != QAbstractSocket::ConnectedState )
+                if ( _sockets[i]->state() != QAbstractSocket::ConnectedState ) {
                     _sockets.erase(_sockets.begin() + i);
+                    emit talking(QString("Erase socket %1 from list").arg(i) );
+                }
             }
             timer->start(1000);
         });
@@ -30,15 +33,17 @@ void My_TCPSocket::Connect(quint16 port)
 void My_TCPSocket::Connect()
 {
     if ( !state_ ) {
-        timer = new QTimer;
+        timer = new QTimer(this);
         timer->setSingleShot(true);
 
         connect(_server, SIGNAL(newConnection()), this, SLOT(incommingConnect()));
 
         connect(timer, &QTimer::timeout, [this](){
             for ( int i = 0; i < _sockets.length(); ++i ) {
-                if ( _sockets[i]->state() != QAbstractSocket::ConnectedState )
+                if ( _sockets[i]->state() != QAbstractSocket::ConnectedState ) {
                     _sockets.erase(_sockets.begin() + i);
+                    emit talking(QString("Erase socket %1 from list").arg(i) );
+                }
             }
             timer->start(100);
         });
@@ -98,19 +103,26 @@ void My_TCPSocket::stateChanged(QAbstractSocket::SocketState stat)
     emit talking(QString("Message: state change %1").arg(stat) );
 }
 
-// My_TCPSocket::Write_X01
-
 void My_TCPSocket::sendCommand(QString str)
 {
-    for ( auto &s:_sockets ) {
-        qDebug() << s->write(str.toLocal8Bit().data() ) << str;
+    buffer_.append(str);
+    for ( int i = buffer_.length(); i < 1460; ++i ) {
+        buffer_.append("\r");
     }
+    for ( auto &s:_sockets ) {
+        if ( s->state() == QAbstractSocket::ConnectedState ) {
+            s->write(buffer_.toLocal8Bit().data() );
+            while ( s->waitForBytesWritten() ) ;
+        }
+    }
+
+    buffer_.clear();
 }
 
 void My_TCPSocket::setSendingFlag(bool f)
 {
     flag_ = f;
-}   // My_TCPSocket::Send_Vector
+}
 
 //
 //

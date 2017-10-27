@@ -5,6 +5,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QTime>
+#include <QFile>
 
 #include "vector"
 
@@ -22,6 +23,11 @@ MainWindow::MainWindow(QWidget * parent) :
 
     scene	= new QGraphicsScene;
     itm		= new QGraphicsPixmapItem;
+    outputCorners_	= new vector<Point2f>(4);
+    pointsFile		= new QFile("./settings.txt");
+    if ( !pointsFile->exists() ) {
+        qDebug() << "File not exist";
+    }
     scene->addItem(itm);
     ui->graphicsView->setScene(scene);
 }
@@ -34,6 +40,8 @@ MainWindow::~MainWindow()
     }
     delete scene;
     delete ui;
+    delete  pointsFile;
+    delete  outputCorners_;
 }
 
 void MainWindow::talking(const QString &s)
@@ -50,6 +58,61 @@ void MainWindow::tr_Take_Contour(vector<vector<Point> > v, double a, double b)
 {
     emit Take_Contour(v, a, b);
 }
+
+void MainWindow::GetCalibrationPoints(vector<Point2f> ov)
+{
+    if ( !pointsFile->open(QIODevice::WriteOnly | QIODevice::Text) ) {
+        qDebug() << "Error: open file";
+    } else {
+        QTextStream os(pointsFile);
+        for ( auto i:ov )
+            os << "x" <<  i.x << "\n"  << "y" <<  i.y << "\n";
+        os << "sx" << ui->lineEdit_3->text() << "\nsy" << ui->lineEdit_4->text() << "\nsp" << ui->lineEdit_5->text();
+        pointsFile->close();
+    }
+}
+
+void MainWindow::on_pushButton_24_clicked()
+{
+    if ( !pointsFile->open(QIODevice::ReadOnly | QIODevice::Text) ) {
+        qDebug() << "Error: open file";
+    } else {
+        vector<Point2f> ov;
+        QTextStream is(pointsFile);
+        QString l;
+        float x, y;
+        while ( !is.atEnd() ) {
+            if ( ov.size() < 4 ) {
+                l = is.readLine();
+                if ( l[0] == 'x' )
+                    x = l.remove(0, 1).toFloat();
+                l = is.readLine();
+                if ( l[0] == 'y' )
+                    y = l.remove(0, 1).toFloat();
+                ov.push_back(Point2f(x, y) );
+            } else {
+                l = is.readLine();
+                if ( l[0] == 's' ) {
+                    if ( l[1] == 'x' ) {
+                        x = l.remove(0, 2).toInt();
+                        ui->lineEdit_3->setText(QString::number(x) );
+                    }
+                    if ( l[1] == 'y' ) {
+                        y = l.remove(0, 2).toInt();
+                        ui->lineEdit_4->setText(QString::number(y) );
+                    }
+                    if ( l[1] == 'p' ) {
+                        int s = 0;
+                        s = l.remove(0, 2).toInt();
+                        ui->lineEdit_5->setText(QString::number(s) );
+                    }
+                }
+            }
+        }
+        emit SetCalibrationPoints(ov);
+        pointsFile->close();
+    }
+}   // MainWindow::on_pushButton_24_clicked
 
 void MainWindow::on_pushButton_4_clicked()
 {
@@ -133,6 +196,11 @@ void MainWindow::on_verticalSlider_2_valueChanged(int value)
     ui->label_4->setText(QString::number(value) );
 }
 
+void MainWindow::on_verticalSlider_5_valueChanged(int value)
+{
+    emit SetThVal(value);
+}
+
 void MainWindow::on_verticalSlider_3_valueChanged(int value)
 {
     emit SetCoeff(-1, -1, value);
@@ -140,13 +208,19 @@ void MainWindow::on_verticalSlider_3_valueChanged(int value)
     ui->label_5->setText(QString::number(value) );
 }
 
+void MainWindow::on_verticalSlider_4_valueChanged(int value)
+{
+    emit SetScale(value);
+
+    ui->label_9->setText(QString::number(value) );
+}
+
 void MainWindow::on_pushButton_clicked()
 {
     if ( _socketState ) {
         laserMachine_->setBurnyState(ui->checkBox->checkState() );
+        emit SetSendFlag();
     }
-
-    emit SetSendFlag();
 }
 
 void MainWindow::on_pushButton_5_clicked()
@@ -182,6 +256,7 @@ void MainWindow::on_pushButton_8_clicked()
 {
     if ( _socketState ) {
         laserMachine_->setSpeed(ui->lineEdit_5->text().toInt() );
+        laserMachine_->command_X02();
     }
 }
 
@@ -227,6 +302,70 @@ void MainWindow::on_pushButton_18_clicked()
 {
     if ( _socketState )
         laserMachine_->setShift(ui->lineEdit_9->text().toDouble() );
+}
+
+void MainWindow::on_pushButton_19_clicked()
+{
+    uint p;
+
+    if ( ui->radioButton_5->isChecked() )
+        p = 1;
+    if ( ui->radioButton_6->isChecked() )
+        p = 4;
+    if ( ui->radioButton_8->isChecked() )
+        p = 2;
+    if ( ui->radioButton_7->isChecked() )
+        p = 3;
+
+    emit SetCalibrationPoints(p, true, false);
+}
+
+void MainWindow::on_pushButton_20_clicked()
+{
+    uint p;
+
+    if ( ui->radioButton_5->isChecked() )
+        p = 1;
+    if ( ui->radioButton_6->isChecked() )
+        p = 4;
+    if ( ui->radioButton_8->isChecked() )
+        p = 2;
+    if ( ui->radioButton_7->isChecked() )
+        p = 3;
+
+    emit SetCalibrationPoints(p, true, true);
+}
+
+void MainWindow::on_pushButton_21_clicked()
+{
+    uint p;
+
+    if ( ui->radioButton_5->isChecked() )
+        p = 1;
+    if ( ui->radioButton_6->isChecked() )
+        p = 4;
+    if ( ui->radioButton_8->isChecked() )
+        p = 2;
+    if ( ui->radioButton_7->isChecked() )
+        p = 3;
+
+    emit SetCalibrationPoints(p, false, false);
+}
+
+void MainWindow::on_pushButton_22_clicked()
+{
+    uint p;
+
+    if ( ui->radioButton_5->isChecked() )
+        p = 1;
+    if ( ui->radioButton_6->isChecked() )
+        p = 4;
+    if ( ui->radioButton_8->isChecked() )
+        p = 2;
+    if ( ui->radioButton_7->isChecked() )
+        p = 3;
+
+    emit SetCalibrationPoints(p, false, true);
 }
 
 //

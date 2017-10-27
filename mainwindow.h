@@ -16,10 +16,13 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
+#include <vector>
+
 using namespace cv;
 
 class QTimer;
 class QTime;
+class QFile;
 
 namespace Ui {
 class MainWindow;
@@ -41,13 +44,18 @@ public slots:
 signals:
     void Quit();
     void NextFrame();
+    void SetScale(int);
+    void SetThVal(int);
     void SetCoeff(int = -1, int = -1, int = -1);
     void SetSendFlag();
     void setCalibrateFlag();
     void setShift(int);
     void Take_Contour(vector<vector<cv::Point> >, double, double);
+    void SetCalibrationPoints(uint point, bool axis, bool incdec);
+    void SetCalibrationPoints(vector<Point2f> );
 
 private slots:
+    void GetCalibrationPoints(vector<Point2f> );
     void on_pushButton_4_clicked();
     void on_pushButton_2_clicked();
     void imgShow(Mat const &, int);
@@ -86,11 +94,27 @@ private slots:
 
     void on_pushButton_18_clicked();
 
+    void on_verticalSlider_4_valueChanged(int value);
+
+    void on_pushButton_19_clicked();
+
+    void on_pushButton_20_clicked();
+
+    void on_pushButton_22_clicked();
+
+    void on_pushButton_21_clicked();
+
+    void on_pushButton_24_clicked();
+
+    void on_verticalSlider_5_valueChanged(int value);
+
 private:
     Ui::MainWindow * ui;
 
     My_TCPSocket * _socket;
     Laser_Machine * laserMachine_;
+
+    vector<Point2f> * outputCorners_;
 
     bool _socketState = false;
     QGraphicsScene * scene;
@@ -98,6 +122,7 @@ private:
     QImage * dst;
     QTimer * _timer;
     QTime * time;
+    QFile * pointsFile;
 };
 
 #endif  // MAINWINDOW_H

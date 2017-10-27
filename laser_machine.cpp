@@ -3,6 +3,10 @@
 #include <QString>
 #include <QDebug>
 
+#include "opencv2/core/core.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/highgui/highgui.hpp"
+
 Q_DECLARE_METATYPE(cv::Point)
 Q_DECLARE_METATYPE(vector<vector<cv::Point> > )
 
@@ -11,17 +15,22 @@ Laser_Machine::Laser_Machine(QObject * parent) : QObject(parent)
     qRegisterMetaType<cv::Point>("cv::Point");
     qRegisterMetaType<vector<vector<cv::Point> > >("vector<vector<cv::Point>>");
     dotsToBurn_.clear();
-    flagReadyGo_	= true;
-    power_			= 5;
-    burnyState_		= false;
-    shiftX_			= 0;
-    shiftY_			= 0;
-    shift_			= 0;
-    sizePacket_		= 150;
+    flagReadyGo_		= true;
+    power_				= 5;
+    burnyState_			= false;
+    shiftX_				= 0;
+    shiftY_				= 0;
+    shift_				= 1;
+    sizePacket_			= 200;
+    cons_				= 0;
+    stateLaserMachine_	= WAIT;
 }
 
 Laser_Machine::~Laser_Machine()
-{ }
+{
+    flagReadyGo_	= false;
+    cons_			= 0;
+}
 
 void Laser_Machine::command_X00()   // command GO
 {
@@ -38,11 +47,12 @@ void Laser_Machine::command_X01(DotCoordinateState d)   // command send setup fr
 
     d.x *= 10;
     d.x += shiftX_;
-    d.x += d.x / ( 16000 * 10);
-    d.x = 9400 - d.x;
+    d.x = 4000 - d.x;
     d.y *= 10;
     d.y += shiftY_;
-    d.y += d.y / 1400;
+
+    qDebug() << d << ": speed =" <<  speed_;
+
     s.append(QString("%1").arg(static_cast<int>(d.x), 4, 10, QChar('0') ) );
     s.append(QString("%1").arg(static_cast<int>(d.y), 4, 10, QChar('0') ) );
     s.append(QString("%1").arg(d.laserOn, 1, 10, QChar('0') ) );
@@ -54,7 +64,7 @@ void Laser_Machine::command_X01(DotCoordinateState d)   // command send setup fr
 
 void Laser_Machine::command_X01(double x, double y, bool p, unsigned int s)
 {
-    DotCoordinateState d = { x, y, p, s };
+    DotCoordinateState d = { 400 - x, y, p, s };
 
     command_X01(d);
 }
@@ -139,44 +149,21 @@ void Laser_Machine::command_X42()
 
 void Laser_Machine::prepareContour(vector<vector<cv::Point> > c, double cx, double cy)
 {
-    if ( c.size() > 0 ) {
+    if ( c.size() > 0 && stateLaserMachine_ == WAIT ) {
+        stateLaserMachine_ = WORK;
         DotCoordinateState tmp;
-        DotCoordinateState min(1000, 1000, 0, 0);
-        DotCoordinateState max(0, 0, 0, 0);
-        DotCoordinateState center(0, 0, 0, 0);
-
-        dotsToBurn_.clear();
 
         for ( auto it = c.begin(); it != c.end(); ++it ) {
             for ( unsigned int i = 0; i < it->size(); ++i ) {
-                if ( it->at(i).x > max.x ) max.x = it->at(i).x;
-                if ( it->at(i).y > max.y ) max.y = it->at(i).y;
-
-                if ( it->at(i).x < min.x ) min.x = it->at(i).x;
-                if ( it->at(i).y < min.y ) min.y = it->at(i).y;
-            }
-        }
-
-        center.x	= (max.x + min.x) / 2;
-        center.y	= (max.y + min.y) / 2;
-
-        for ( auto it = c.begin(); it != c.end(); ++it ) {
-            for ( unsigned int i = 0; i < it->size(); ++i ) {
-                if ( it->at(i).x < center.x ) {
-                    tmp.x = (it->at(i).x / cx) * 1.03;
-                } else {
-                    tmp.x = (it->at(i).x / cx) / 0.97;
-                }
-                if ( it->at(i).y < center.y ) {
-                    tmp.y = (it->at(i).y / cy) * 1.03;
-                } else {
-                    tmp.y = (it->at(i).y / cy) / 0.97;
-                }
+                tmp.x		= it->at(i).x / cx;
+                tmp.y		= it->at(i).y / cy;
                 tmp.power	= power_;
-                tmp.laserOn = (i == 0 || i == it->size() - 1 || i == it->size() - 2 || i == 1) ? false : burnyState_;
+                tmp.laserOn = (i == 0 || i == it->size() - 1) ? false : burnyState_;
                 dotsToBurn_.push_back(tmp);
             }
         }
+
+        qDebug() << "dots to burn" << dotsToBurn_.size();
 
         cons_ = static_cast<unsigned>(dotsToBurn_.size() - 1);
         command_X02();
@@ -198,15 +185,21 @@ void Laser_Machine::sendToLaser()
             }
             if ( flagReadySend_ )
                 break;
-            if ( count % 2 == 0 )
-                command_X01(dotsToBurn_[cons_]);
+            command_X01(dotsToBurn_[cons_]);
             count++;
         }
     }
 
     emit setSendingFlag( (cons_ > 0) ? true : false );
 
-    qDebug() << "end post ";
+    if ( cons_ <= 0 ) {
+        command_X02(150);
+        command_X01(home_);
+        command_X02();
+        stateLaserMachine_ = WAIT;
+        dotsToBurn_.clear();
+    }
+    qDebug() << "end post " << cons_;
     command_X00();
 }
 
@@ -218,8 +211,8 @@ void Laser_Machine::nextPacket()
 
 void Laser_Machine::initMoves()
 {
-    command_X02(60);
-    command_X01(DotCoordinateState(120, 2, 0, 0) );
+    command_X02(140);
+    command_X01(home_);
     command_X00();
     command_X05(false);
     command_X04(false);
@@ -227,11 +220,9 @@ void Laser_Machine::initMoves()
 
 void Laser_Machine::resetState()
 {
-    DotCoordinateState d = { 120, 2, 0, 0 };
-
     dotsToBurn_.clear();
     emit sendCommand("X050");
-    command_X01(d);
+    command_X01(home_);
     command_X00();
 }
 
